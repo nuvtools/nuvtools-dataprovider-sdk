@@ -60,13 +60,13 @@
 	<ItemGroup>
 		<!-- The platform's own error envelope, and the reader for it. Reusing this rather than
 		     parsing the body here keeps one error shape across the platform API and the data plane. -->
-		<PackageReference Include="NuvTools.Common" Version="10.0.10" />
-		<!-- The LOWEST versions that satisfy the graph, not the newest. This package is installed
-		     into other people's applications: pinning 10.x here would force a net8.0 app onto the
-		     10.x extensions stack to take a bug fix from us. 9.0.9 is the floor Http.Resilience
-		     9.9.0 itself requires. -->
-		<PackageReference Include="Microsoft.Extensions.Http" Version="9.0.9" />
-		<PackageReference Include="Microsoft.Extensions.Http.Resilience" Version="9.9.0" />
+		<PackageReference Include="NuvTools.Common" Version="10.0.11" />
+		<!-- Kept at the current releases, like every other dependency in this repository. The cost
+		     is known and accepted: the same versions apply to all three target frameworks, so an
+		     application on net8.0 or net9.0 that installs this package moves onto the 10.x
+		     Microsoft.Extensions stack with it. -->
+		<PackageReference Include="Microsoft.Extensions.Http" Version="10.0.12" />
+		<PackageReference Include="Microsoft.Extensions.Http.Resilience" Version="10.10.0" />
 	</ItemGroup>
 
 </Project>

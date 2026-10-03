@@ -30,8 +30,9 @@ LICENSE, icon.png              shared by every package
 - **It depends on nothing private.** A package here is installed into other people's processes, so
   it references only what is on nuget.org. It restates what it needs of the platform's wire
   contract — header names, the error envelope — rather than sharing code with the platform.
-- **It pins the lowest dependency versions that satisfy it.** Pinning forward would force a
-  consumer's application onto a newer stack to take a fix from us.
+- **Its dependencies are kept at their current releases.** That means an application on an older
+  target framework takes the newer `Microsoft.Extensions.*` packages along with this one; the
+  trade is accepted in exchange for shipping current fixes.
 - **It meters nothing.** Calls are counted in the platform's data plane and nowhere else; a library
   that counted them would be a second answer to what a call cost.
 

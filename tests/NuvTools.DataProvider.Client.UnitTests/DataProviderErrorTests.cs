@@ -166,9 +166,9 @@ public class DataProviderErrorTests
     {
         using var refused = From(GatewayRefusals.CredentialRefused());
 
-        var exception = Assert.ThrowsAsync<DataProviderException>(() => refused.EnsureSuccessAsync());
+        var exception = await Assert.ThrowsAsync<DataProviderException>(() => refused.EnsureSuccessAsync());
 
-        Assert.That(exception.Type, Is.EqualTo(DataProviderErrorType.CredentialRefused));
+        Assert.That(exception!.Type, Is.EqualTo(DataProviderErrorType.CredentialRefused));
 
         // A provider's own 404 is an answer; EnsureSuccessAsync deliberately does less than
         // EnsureSuccessStatusCode and lets it through.
