@@ -1,0 +1,147 @@
+# =============================================================================
+# Publishes NuvTools.DataProvider.Client to nuget.org.
+#
+# Triggered by a tag shaped client-vX.Y.Z, or by hand for a dry run. Gated on
+# the "nuget" GitHub Environment, whose required reviewers approve the push.
+#
+# One package today. A second one gets its own tag prefix and its own PROJECT;
+# the steps below do not change.
+#
+# Publishing to nuget.org is IRREVERSIBLE per version: a version can be
+# unlisted but never replaced or re-pushed. Everything below exists to make the
+# irreversible step the last one and the smallest one.
+# =============================================================================
+
+name: Package Publish
+run-name: Package · ${{ github.ref_type == 'tag' && github.ref_name || format('dry run ({0})', github.ref_name) }}
+
+on:
+  push:
+    tags:
+      - 'client-v*'
+  workflow_dispatch:
+    inputs:
+      push:
+        description: "Push to nuget.org (uncheck for pack + verify only)"
+        type: boolean
+        default: false
+
+permissions:
+  contents: read
+
+env:
+  PROJECT: src/NuvTools.DataProvider.Client/NuvTools.DataProvider.Client.csproj
+  SOLUTION: NuvTools.DataProvider.Sdk.slnx
+  TAG_PREFIX: client-v
+
+jobs:
+  pack:
+    name: Pack & verify
+    runs-on: ubuntu-latest
+    outputs:
+      version: ${{ steps.version.outputs.version }}
+    steps:
+      - name: Checkout
+        # Full history: SourceLink embeds the commit, and a shallow clone makes
+        # the link point at something a consumer's debugger cannot resolve.
+        uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v6
+        with:
+          dotnet-version: '10.0.x'
+
+      # ---------------------------------------------------------------------
+      # The version is VERIFIED, never computed. The .csproj is the single
+      # statement of what version this is; a workflow that derived it from the
+      # tag would let a tag publish a package whose assembly says something
+      # else, and the mismatch would only surface in a consumer's stack trace.
+      # ---------------------------------------------------------------------
+      - name: Read version from the project
+        id: version
+        run: |
+          version="$(grep -oPm1 '(?<=<Version>)[^<]+' "$PROJECT")"
+          if [ -z "$version" ]; then
+            echo "::error file=$PROJECT::No <Version> found."
+            exit 1
+          fi
+          echo "version=$version" >> "$GITHUB_OUTPUT"
+          echo "Project version: $version"
+
+      - name: Check the tag matches
+        if: github.ref_type == 'tag'
+        run: |
+          tagged="${GITHUB_REF_NAME#$TAG_PREFIX}"
+          if [ "$tagged" != "${{ steps.version.outputs.version }}" ]; then
+            echo "::error::Tag $GITHUB_REF_NAME says $tagged, but $PROJECT says ${{ steps.version.outputs.version }}. Bump the project or retag."
+            exit 1
+          fi
+
+      - name: Restore
+        run: dotnet restore ${{ env.SOLUTION }}
+
+      - name: Build
+        run: dotnet build ${{ env.SOLUTION }} --no-restore -c Release -warnaserror
+
+      - name: Test
+        run: dotnet test ${{ env.SOLUTION }} --no-build -c Release --verbosity normal
+
+      - name: Pack
+        run: dotnet pack ${{ env.PROJECT }} --no-build -c Release -o artifacts
+
+      # A package that is missing its README, licence or symbols is only
+      # discovered after it is published, when it can no longer be fixed.
+      - name: Verify the package carries what it should
+        run: |
+          set -e
+          nupkg="artifacts/NuvTools.DataProvider.Client.${{ steps.version.outputs.version }}.nupkg"
+          snupkg="artifacts/NuvTools.DataProvider.Client.${{ steps.version.outputs.version }}.snupkg"
+          [ -f "$nupkg" ]  || { echo "::error::$nupkg was not produced."; exit 1; }
+          [ -f "$snupkg" ] || { echo "::error::$snupkg was not produced; symbols are part of the release."; exit 1; }
+          for entry in README.md LICENSE icon.png; do
+            unzip -l "$nupkg" | grep -q "$entry" || { echo "::error::$entry is missing from the package."; exit 1; }
+          done
+          for tfm in net8.0 net9.0 net10.0; do
+            unzip -l "$nupkg" | grep -q "lib/$tfm/NuvTools.DataProvider.Client.dll" \
+              || { echo "::error::$tfm is missing from the package."; exit 1; }
+          done
+          echo "Package contents verified."
+
+      - name: Upload
+        uses: actions/upload-artifact@v4
+        with:
+          name: package
+          path: artifacts/*
+
+  publish:
+    name: Push to nuget.org
+    needs: pack
+    # Manual runs only push when the box is ticked; a tag always intends to publish.
+    if: ${{ github.ref_type == 'tag' || inputs.push }}
+    runs-on: ubuntu-latest
+    environment:
+      name: nuget
+      url: https://www.nuget.org/packages/NuvTools.DataProvider.Client/${{ needs.pack.outputs.version }}
+    steps:
+      - name: Download
+        uses: actions/download-artifact@v4
+        with:
+          name: package
+          path: artifacts
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v6
+        with:
+          dotnet-version: '10.0.x'
+
+      # --skip-duplicate so a re-run of a partially failed publish is not itself
+      # a failure: nuget.org rejects a version that already exists, and that is
+      # the correct outcome rather than an error to investigate.
+      - name: Push
+        run: |
+          dotnet nuget push "artifacts/*.nupkg" \
+            --source https://api.nuget.org/v3/index.json \
+            --api-key "${{ secrets.NUGET_API_KEY }}" \
+            --skip-duplicate

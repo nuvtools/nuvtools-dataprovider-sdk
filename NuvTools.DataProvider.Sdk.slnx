@@ -1,0 +1,13 @@
+<Solution>
+  <Folder Name="/Solution Items/">
+    <File Path=".editorconfig" />
+    <File Path="LICENSE" />
+    <File Path="README.md" />
+  </Folder>
+  <Folder Name="/src/">
+    <Project Path="src/NuvTools.DataProvider.Client/NuvTools.DataProvider.Client.csproj" />
+  </Folder>
+  <Folder Name="/tests/">
+    <Project Path="tests/NuvTools.DataProvider.Client.UnitTests/NuvTools.DataProvider.Client.UnitTests.csproj" />
+  </Folder>
+</Solution>

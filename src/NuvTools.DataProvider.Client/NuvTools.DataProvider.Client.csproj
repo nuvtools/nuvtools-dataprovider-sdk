@@ -1,0 +1,72 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+	<PropertyGroup>
+		<!-- Matches NuvTools.Common, which this package depends on. Critically there is NO
+		     FrameworkReference to Microsoft.AspNetCore.App: that reference would make the package
+		     unusable from a console app, a worker or a MAUI client, and a consumer SDK is used
+		     from all three far more often than from a web app. -->
+		<TargetFrameworks>net8.0;net9.0;net10.0</TargetFrameworks>
+		<Nullable>enable</Nullable>
+		<ImplicitUsings>enable</ImplicitUsings>
+		<AnalysisLevel>latest</AnalysisLevel>
+		<EnforceCodeStyleInBuild>True</EnforceCodeStyleInBuild>
+		<NeutralLanguage>en</NeutralLanguage>
+
+		<Version>10.0.0</Version>
+		<Authors>Nuv Tools</Authors>
+		<Copyright>Copyright © 2026 Nuv Tools</Copyright>
+		<Description>Consumer SDK for the Nuv Tools Data Provider marketplace. Gives a named HttpClient based at an API's address on the data plane, attaches the access token per call, and turns the platform's own refusals into typed errors — including telling a spent monthly quota apart from a per-second rate limit, which look identical on the wire and must not be retried the same way.</Description>
+		<PackageProjectUrl>https://nuvtools.com</PackageProjectUrl>
+		<PackageTags>NuvTools DataProvider Client SDK Marketplace Api HttpClient</PackageTags>
+		<PackageIcon>icon.png</PackageIcon>
+		<PackageReadmeFile>README.md</PackageReadmeFile>
+		<PackageLicenseFile>LICENSE</PackageLicenseFile>
+		<PackageRequireLicenseAcceptance>True</PackageRequireLicenseAcceptance>
+		<RepositoryUrl>https://github.com/nuvtools/nuvtools-dataprovider-sdk</RepositoryUrl>
+		<RepositoryType>git</RepositoryType>
+		<GenerateDocumentationFile>True</GenerateDocumentationFile>
+
+		<!-- SourceLink: a stack trace from a consumer's process steps into the exact commit this
+		     package was built from. EmbedUntrackedSources covers the generated files, which are the
+		     ones a debugger otherwise cannot find.
+
+		     No Microsoft.SourceLink.GitHub reference: the .NET 8+ SDK has SourceLink built in, and
+		     the standalone package drags in Microsoft.Build.Tasks.Git 8.0.0, which carries a known
+		     advisory (GHSA-23fw-v26w-5fgq) that -warnaserror turns into a failed build. -->
+		<PublishRepositoryUrl>true</PublishRepositoryUrl>
+		<EmbedUntrackedSources>true</EmbedUntrackedSources>
+		<IncludeSymbols>true</IncludeSymbols>
+		<SymbolPackageFormat>snupkg</SymbolPackageFormat>
+	</PropertyGroup>
+
+	<!-- Set by the publish workflow. Makes the build deterministic and marks the package as built by
+	     CI rather than on somebody's machine. -->
+	<PropertyGroup Condition="'$(GITHUB_ACTIONS)' == 'true'">
+		<ContinuousIntegrationBuild>true</ContinuousIntegrationBuild>
+	</PropertyGroup>
+
+	<ItemGroup>
+		<!-- The icon and the licence are the repository's, shared by every package in it; the README
+		     is this package's own and sits beside the project. -->
+		<None Include="..\..\icon.png" Pack="True" PackagePath="" />
+		<None Include="..\..\LICENSE" Pack="True" PackagePath="" />
+		<None Include="README.md" Pack="True" PackagePath="\" />
+	</ItemGroup>
+
+	<ItemGroup>
+		<InternalsVisibleTo Include="NuvTools.DataProvider.Client.UnitTests" />
+	</ItemGroup>
+
+	<ItemGroup>
+		<!-- The platform's own error envelope, and the reader for it. Reusing this rather than
+		     parsing the body here keeps one error shape across the platform API and the data plane. -->
+		<PackageReference Include="NuvTools.Common" Version="10.0.10" />
+		<!-- The LOWEST versions that satisfy the graph, not the newest. This package is installed
+		     into other people's applications: pinning 10.x here would force a net8.0 app onto the
+		     10.x extensions stack to take a bug fix from us. 9.0.9 is the floor Http.Resilience
+		     9.9.0 itself requires. -->
+		<PackageReference Include="Microsoft.Extensions.Http" Version="9.0.9" />
+		<PackageReference Include="Microsoft.Extensions.Http.Resilience" Version="9.9.0" />
+	</ItemGroup>
+
+</Project>
