@@ -1,0 +1,37 @@
+# =============================================================================
+# Publishes NuvTools.DataProvider.Client to nuget.org.
+#
+# Triggered by a tag shaped client-vX.Y.Z, or by hand for a dry run. The steps
+# are package-publish.yml's; this file only says which package.
+#
+# One workflow per library: a tag, a run and an approval each concern exactly
+# one package, so releasing this one can never push another.
+# =============================================================================
+
+name: Client Publish
+run-name: Client · ${{ github.ref_type == 'tag' && github.ref_name || format('dry run ({0})', github.ref_name) }}
+
+on:
+  push:
+    tags:
+      - 'client-v*'
+  workflow_dispatch:
+    inputs:
+      push:
+        description: "Push to nuget.org (uncheck for pack + verify only)"
+        type: boolean
+        default: false
+
+permissions:
+  contents: read
+
+jobs:
+  publish:
+    uses: ./.github/workflows/package-publish.yml
+    with:
+      project: src/NuvTools.DataProvider.Client/NuvTools.DataProvider.Client.csproj
+      package-id: NuvTools.DataProvider.Client
+      tag-prefix: client-v
+      # A tag always intends to publish; a manual run only does when the box is ticked.
+      push: ${{ github.ref_type == 'tag' || inputs.push == true }}
+    secrets: inherit

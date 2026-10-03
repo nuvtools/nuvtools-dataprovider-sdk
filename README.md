@@ -40,13 +40,26 @@ LICENSE, icon.png              shared by every package
 Publishing to nuget.org is irreversible per version, so the workflow makes it the last and smallest
 step.
 
-1. Set the package's `<Version>` in its `.csproj`.
-2. Tag the commit `<package>-v<version>` — `client-v10.0.0` for `NuvTools.DataProvider.Client`.
-3. `package-publish.yml` checks the tag against the project's version, builds with `-warnaserror`,
-   runs the tests, packs, verifies the package carries its README, licence, icon, symbols and every
-   target framework, and then waits for approval on the `nuget` GitHub Environment before pushing.
+**One workflow per library.** Each package has its own — `client-publish.yml` for
+`NuvTools.DataProvider.Client` — with its own tag prefix, so a tag, a run and an approval each
+concern exactly one package. The steps themselves are shared, in the reusable `package-publish.yml`.
 
-Run the workflow by hand with *push* unchecked for a dry run that stops after the verification.
+1. Set the package's `<Version>` in its `.csproj`. That is the version that gets published; the
+   workflow reads it and never computes one.
+2. Tag the commit `<package>-v<version>` — `client-v10.0.0` for `NuvTools.DataProvider.Client`. A
+   tag that disagrees with the `.csproj` fails the run.
+3. The workflow builds the solution with `-warnaserror`, runs the tests, packs **that package only**,
+   verifies it carries its README, licence, icon, symbols and every target framework, and then waits
+   for approval on the `nuget` GitHub Environment before pushing.
+
+A version that is already on nuget.org is skipped, not replaced: the push uses `--skip-duplicate`,
+so re-running a release is harmless and publishing a change always needs a new `<Version>`.
+
+Run a library's workflow by hand with *push* unchecked for a dry run that stops after the
+verification.
+
+To add a library: copy `client-publish.yml`, and change the name, the tag prefix, the project path
+and the package id.
 
 ## License
 
