@@ -26,7 +26,7 @@ on:
         type: string
         required: true
       tag-prefix:
-        description: "What a release tag for this package starts with, e.g. client-v"
+        description: "What the release tag written after a push starts with, e.g. client-v"
         type: string
         required: true
       target-frameworks:
@@ -90,14 +90,20 @@ jobs:
           echo "version=$version" >> "$GITHUB_OUTPUT"
           echo "Project version: $version"
 
-      - name: Check the tag matches
-        if: github.ref_type == 'tag'
+      # The release tag is written by this workflow after a successful push, so a tag that already
+      # exists means this version has been released. Stopping here, before anything is built, is
+      # what turns "forgot to bump <Version>" into a clear message instead of a silent skip.
+      - name: Check this version has not been released
+        if: ${{ inputs.push }}
+        env:
+          GH_TOKEN: ${{ github.token }}
         run: |
-          tagged="${GITHUB_REF_NAME#$TAG_PREFIX}"
-          if [ "$tagged" != "${{ steps.version.outputs.version }}" ]; then
-            echo "::error::Tag $GITHUB_REF_NAME says $tagged, but $PROJECT says ${{ steps.version.outputs.version }}. Bump the project or retag."
+          tag="${TAG_PREFIX}${{ steps.version.outputs.version }}"
+          if gh api "repos/$GITHUB_REPOSITORY/git/ref/tags/$tag" >/dev/null 2>&1; then
+            echo "::error file=$PROJECT::$tag already exists: version ${{ steps.version.outputs.version }} has been released. Bump <Version> in $PROJECT."
             exit 1
           fi
+          echo "$tag does not exist yet."
 
       # The whole solution, not only this package: a release goes out from a
       # commit where everything in the repository builds and passes.
@@ -147,8 +153,9 @@ jobs:
     # nuget.org checks it against the policy registered for this repository, workflow file and
     # environment, and answers with a key that lives for one hour. id-token is what lets the job
     # ask; the calling workflow has to grant it too, since a called workflow cannot widen it.
+    # contents: write is for the release tag this job creates once the push has succeeded.
     permissions:
-      contents: read
+      contents: write
       id-token: write
     environment:
       name: nuget
@@ -183,3 +190,19 @@ jobs:
             --source https://api.nuget.org/v3/index.json \
             --api-key "${{ steps.login.outputs.NUGET_API_KEY }}" \
             --skip-duplicate
+
+      # After the push and only after it: the tag records what is on nuget.org, so it must never
+      # exist for a version that did not get there. Created through the API on the commit this run
+      # built, which needs no checkout. If a previous attempt pushed the package and failed here,
+      # re-running skips the duplicate push and writes the tag.
+      - name: Tag the release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          tag="${TAG_PREFIX}${{ needs.pack.outputs.version }}"
+          if gh api "repos/$GITHUB_REPOSITORY/git/ref/tags/$tag" >/dev/null 2>&1; then
+            echo "$tag already exists; leaving it as it is."
+          else
+            gh api "repos/$GITHUB_REPOSITORY/git/refs" -f ref="refs/tags/$tag" -f sha="$GITHUB_SHA" >/dev/null
+            echo "Created $tag at $GITHUB_SHA."
+          fi

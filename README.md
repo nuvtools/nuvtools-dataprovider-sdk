@@ -42,16 +42,21 @@ Publishing to nuget.org is irreversible per version, so the workflow makes it th
 step.
 
 **One workflow per library.** Each package has its own — `client-publish.yml` for
-`NuvTools.DataProvider.Client` — with its own tag prefix, so a tag, a run and an approval each
-concern exactly one package. The steps themselves are shared, in the reusable `package-publish.yml`.
+`NuvTools.DataProvider.Client` — so a run and an approval each concern exactly one package. The
+steps themselves are shared, in the reusable `package-publish.yml`.
 
-1. Set the package's `<Version>` in its `.csproj`. That is the version that gets published; the
-   workflow reads it and never computes one.
-2. Tag the commit `<package>-v<version>` — `client-v10.0.0` for `NuvTools.DataProvider.Client`. A
-   tag that disagrees with the `.csproj` fails the run.
+1. Set the package's `<Version>` in its `.csproj` and merge it. That is the version that gets
+   published; the workflow reads it and never computes one.
+2. Run the library's workflow by hand (*Actions → Client Publish → Run workflow*) with *push*
+   checked.
 3. The workflow builds the solution with `-warnaserror`, runs the tests, packs **that package only**,
    verifies it carries its README, licence, icon, symbols and every target framework, and then waits
    for approval on the `nuget` GitHub Environment before pushing.
+4. **After the push succeeds, the workflow tags the commit** `<package>-v<version>` —
+   `client-v10.0.0` for `NuvTools.DataProvider.Client`. The tag is a record of what is on nuget.org,
+   never what starts a release, so it cannot exist for a version that did not get there. A run
+   whose tag already exists stops before building: the version has been released and `<Version>`
+   needs a bump.
 
 **No API key is stored.** The push uses nuget.org's trusted publishing: the job presents a GitHub
 OIDC token, nuget.org checks it against the policy registered for this repository and answers with a
