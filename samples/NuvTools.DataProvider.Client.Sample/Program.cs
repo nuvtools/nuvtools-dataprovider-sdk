@@ -2,17 +2,21 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using NuvTools.DataProvider.Client;
 
-// dotnet run -- <api code> <path>
-var apiCode = args.Length > 0 ? args[0] : "geography";
-var path = args.Length > 1 ? args[1] : "v1/countries/BR";
-
-// The token comes from user secrets or the environment, never from a file in the repository.
+// Every setting is listed in appsettings.json. User secrets and the environment override it, which
+// is where the token belongs: the file is in the repository, so its Token stays empty.
 var configuration = new ConfigurationBuilder()
+    .SetBasePath(AppContext.BaseDirectory)
+    .AddJsonFile("appsettings.json", optional: false)
     .AddUserSecrets<Program>(optional: true)
     .AddEnvironmentVariables()
     .Build();
 
-var token = configuration["DataProvider:Token"];
+var settings = configuration.GetSection("DataProvider");
+
+// dotnet run -- <api code> <path> calls something else without editing the file.
+var apiCode = args.Length > 0 ? args[0] : settings["ApiCode"] ?? string.Empty;
+var path = args.Length > 1 ? args[1] : settings["Path"] ?? string.Empty;
+var token = settings["Token"];
 
 if (string.IsNullOrWhiteSpace(token))
 {
@@ -35,11 +39,11 @@ services.AddNuvToolsDataProvider(options =>
     // a restart. Here it is the value read above.
     options.TokenProvider = _ => ValueTask.FromResult(token);
 
-    // Only for pointing the sample at a test environment; the default is the platform's own address.
-    if (configuration["DataProvider:BaseAddress"] is { Length: > 0 } baseAddress)
-    {
-        options.BaseAddress = new Uri(baseAddress);
-    }
+    // The rest have defaults in the package; the file states them so they can be seen and changed.
+    // BaseAddress is only ever changed to point at a test environment.
+    options.BaseAddress = settings.GetValue("BaseAddress", options.BaseAddress)!;
+    options.Timeout = TimeSpan.FromSeconds(settings.GetValue("TimeoutSeconds", options.Timeout.TotalSeconds));
+    options.EnableRetries = settings.GetValue("EnableRetries", options.EnableRetries);
 });
 
 await using var provider = services.BuildServiceProvider();

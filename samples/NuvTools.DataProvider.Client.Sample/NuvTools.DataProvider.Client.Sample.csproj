@@ -15,8 +15,14 @@
 		<!-- The package from nuget.org and not a ProjectReference, on purpose: the sample is what
 		     somebody outside this repository writes, so it installs what they install. -->
 		<PackageReference Include="NuvTools.DataProvider.Client" Version="10.0.0" />
+		<PackageReference Include="Microsoft.Extensions.Configuration.Binder" Version="10.0.12" />
 		<PackageReference Include="Microsoft.Extensions.Configuration.EnvironmentVariables" Version="10.0.12" />
+		<PackageReference Include="Microsoft.Extensions.Configuration.Json" Version="10.0.12" />
 		<PackageReference Include="Microsoft.Extensions.Configuration.UserSecrets" Version="10.0.12" />
+	</ItemGroup>
+
+	<ItemGroup>
+		<None Update="appsettings.json" CopyToOutputDirectory="PreserveNewest" />
 	</ItemGroup>
 
 </Project>

@@ -18,8 +18,8 @@ dotnet user-secrets set DataProvider:Token <token>
 dotnet run
 ```
 
-With no arguments it calls `geography` at `v1/countries/BR`. Pass an API code and a path to call
-something else:
+With no arguments it calls what `appsettings.json` names — `geography` at `v1/countries/BR`. Pass an
+API code and a path to call something else without editing the file:
 
 ```bash
 dotnet run -- geography v1/brazil/states
@@ -27,12 +27,17 @@ dotnet run -- geography v1/brazil/states
 
 ## Settings
 
-Read from user secrets, then from environment variables.
+All of them are listed in `appsettings.json`, under `DataProvider`. User secrets override the file,
+and environment variables (`DataProvider__<Setting>`) override both.
 
-| Setting | Environment variable | |
-|---|---|---|
-| `DataProvider:Token` | `DataProvider__Token` | Required. The access token of your subscription. |
-| `DataProvider:BaseAddress` | `DataProvider__BaseAddress` | Optional. Replaces `https://api.nuvtools.com/` to point at a test environment. |
+| Setting | |
+|---|---|
+| `BaseAddress` | The platform's address. Changed only to point at a test environment. |
+| `ApiCode` | The code of the API to call, and the name of the `HttpClient` registered for it. |
+| `Path` | What to `GET`, relative to the API's address. |
+| `Token` | Required. The access token of your subscription. **Leave it empty in the file** and set it with `dotnet user-secrets` or `DataProvider__Token`, so it never reaches a repository. |
+| `TimeoutSeconds` | How long one attempt may take, before retries. |
+| `EnableRetries` | Whether the package retries the calls that are safe to retry. |
 
 ## What to read in `Program.cs`
 
