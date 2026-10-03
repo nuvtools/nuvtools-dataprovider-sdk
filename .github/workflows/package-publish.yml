@@ -38,7 +38,8 @@ on:
         type: boolean
         default: false
     secrets:
-      NUGET_API_KEY:
+      # The nuget.org profile name (not the e-mail) the trusted publishing policy belongs to.
+      NUGET_USER:
         required: false
 
 permissions:
@@ -142,6 +143,13 @@ jobs:
     needs: pack
     if: ${{ inputs.push }}
     runs-on: ubuntu-latest
+    # Trusted publishing: no API key is stored anywhere. This job asks GitHub for an OIDC token,
+    # nuget.org checks it against the policy registered for this repository, workflow file and
+    # environment, and answers with a key that lives for one hour. id-token is what lets the job
+    # ask; the calling workflow has to grant it too, since a called workflow cannot widen it.
+    permissions:
+      contents: read
+      id-token: write
     environment:
       name: nuget
       url: https://www.nuget.org/packages/${{ inputs.package-id }}/${{ needs.pack.outputs.version }}
@@ -162,9 +170,16 @@ jobs:
       # the correct outcome rather than an error to investigate. It never
       # replaces what is there — a version that is already published stays
       # exactly as it was.
+      # Requested immediately before the push: the key is single-use per token and expires in an hour.
+      - name: NuGet login (OIDC, temporary API key)
+        id: login
+        uses: NuGet/login@v1
+        with:
+          user: ${{ secrets.NUGET_USER }}
+
       - name: Push
         run: |
           dotnet nuget push "artifacts/*.nupkg" \
             --source https://api.nuget.org/v3/index.json \
-            --api-key "${{ secrets.NUGET_API_KEY }}" \
+            --api-key "${{ steps.login.outputs.NUGET_API_KEY }}" \
             --skip-duplicate

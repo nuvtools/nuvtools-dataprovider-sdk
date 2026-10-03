@@ -22,8 +22,11 @@ on:
         type: boolean
         default: false
 
+# id-token is for the publish job's OIDC exchange with nuget.org; a called workflow can only use
+# what its caller grants.
 permissions:
   contents: read
+  id-token: write
 
 jobs:
   publish:

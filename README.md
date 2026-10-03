@@ -52,6 +52,13 @@ concern exactly one package. The steps themselves are shared, in the reusable `p
    verifies it carries its README, licence, icon, symbols and every target framework, and then waits
    for approval on the `nuget` GitHub Environment before pushing.
 
+**No API key is stored.** The push uses nuget.org's trusted publishing: the job presents a GitHub
+OIDC token, nuget.org checks it against the policy registered for this repository and answers with a
+key that lives for one hour. The repository needs one secret, `NUGET_USER` — the nuget.org profile
+name the policy belongs to — and the policy itself, registered under *Trusted Publishing* on
+nuget.org with the owner `nuvtools`, the repository `nuvtools-dataprovider-sdk`, the workflow file
+and the environment `nuget`.
+
 A version that is already on nuget.org is skipped, not replaced: the push uses `--skip-duplicate`,
 so re-running a release is harmless and publishing a change always needs a new `<Version>`.
 
