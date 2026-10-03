@@ -22,6 +22,7 @@ release tag.
 NuvTools.DataProvider.Sdk.slnx
 src/<Package>/                 the library, and the README that ships inside the package
 tests/<Package>.UnitTests/     its tests
+samples/<Package>.Sample/      a console application using the package as published on nuget.org
 LICENSE, icon.png              shared by every package
 ```
 

@@ -4,6 +4,9 @@
     <File Path="LICENSE" />
     <File Path="README.md" />
   </Folder>
+  <Folder Name="/samples/">
+    <Project Path="samples/NuvTools.DataProvider.Client.Sample/NuvTools.DataProvider.Client.Sample.csproj" />
+  </Folder>
   <Folder Name="/src/">
     <Project Path="src/NuvTools.DataProvider.Client/NuvTools.DataProvider.Client.csproj" />
   </Folder>
